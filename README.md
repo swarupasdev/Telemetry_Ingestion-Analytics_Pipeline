@@ -1,0 +1,1 @@
+Developed a real-time C++ data ingestion loop for synthetic system metrics.
