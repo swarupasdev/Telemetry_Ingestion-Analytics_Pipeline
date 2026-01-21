@@ -3,5 +3,5 @@
     <Platform Name="x64" />
     <Platform Name="x86" />
   </Configurations>
-  <Project Path="telemetry_ingestion-Analytics_pipeline.vcxproj" />
+  <Project Path="telemetry_ingestion-Analytics_pipeline.vcxproj" Id="64d07923-9146-4050-aee1-f92d963b7cd0" />
 </Solution>
