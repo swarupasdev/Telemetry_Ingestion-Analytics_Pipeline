@@ -5,6 +5,7 @@
 #include <queue>
 #include <chrono>
 #include <random>
+#include <fstream>
 
 struct DataSample {
     long long timestamp;
@@ -40,6 +41,16 @@ void producer() {
 }
 
 void consumer() {
+    std::ofstream file("telemetry.csv", std::ios::app);
+
+    if (!file.is_open()) {
+        std::cerr << "Failed to open telemetry.csv\n";
+        return;
+    }
+
+    file << "timestamp,cpu,ram\n";
+    file.flush();
+
     while (running) {
         std::unique_lock<std::mutex> lock(mtx);
         cv.wait(lock, [] { return !buffer.empty(); });
@@ -48,10 +59,11 @@ void consumer() {
         buffer.pop();
         lock.unlock();
 
-        std::cout << "timestamp=" << s.timestamp
-            << " cpu=" << s.cpu
-            << " ram=" << s.ram
-            << std::endl;
+        file << s.timestamp << ","
+            << s.cpu << ","
+            << s.ram << "\n";
+
+        file.flush();
     }
 }
 
