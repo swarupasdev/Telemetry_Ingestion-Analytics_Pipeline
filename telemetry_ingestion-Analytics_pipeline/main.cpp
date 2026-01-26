@@ -1,29 +1,65 @@
 #include <iostream>
-#include <chrono>
 #include <thread>
+#include <mutex>
+#include <condition_variable>
+#include <queue>
+#include <chrono>
 #include <random>
 
-int main() {
+struct DataSample {
+    long long timestamp;
+    float cpu;
+    float ram;
+};
+
+std::queue<DataSample> buffer;
+std::mutex mtx;
+std::condition_variable cv;
+bool running = true;
+
+void producer() {
     std::random_device rd;
     std::mt19937 gen(rd());
     std::uniform_real_distribution<float> dist(0.0f, 100.0f);
 
-    while (true) {
+    while (running) {
         auto now = std::chrono::system_clock::now();
-        auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(
-            now.time_since_epoch()
-        ).count();
+        long long ts = std::chrono::duration_cast<std::chrono::milliseconds>(
+            now.time_since_epoch()).count();
 
-        float cpu = dist(gen);
-        float ram = dist(gen);
+        DataSample s{ ts, dist(gen), dist(gen) };
 
-        std::cout << "timestamp=" << ms
-            << " cpu=" << cpu
-            << " ram=" << ram
-            << std::endl;
+        {
+            std::lock_guard<std::mutex> lock(mtx);
+            buffer.push(s);
+        }
 
+        cv.notify_one();
         std::this_thread::sleep_for(std::chrono::seconds(1));
     }
+}
 
+void consumer() {
+    while (running) {
+        std::unique_lock<std::mutex> lock(mtx);
+        cv.wait(lock, [] { return !buffer.empty(); });
+
+        DataSample s = buffer.front();
+        buffer.pop();
+        lock.unlock();
+
+        std::cout << "timestamp=" << s.timestamp
+            << " cpu=" << s.cpu
+            << " ram=" << s.ram
+            << std::endl;
+    }
+}
+
+int main() {
+    std::thread t1(producer);
+    std::thread t2(consumer);
+
+    t1.join();
+    t2.join();
     return 0;
 }
